@@ -1,6 +1,5 @@
 # Student: William Schuch & Rik van Berkum
 # Team: Geodetic Engineers of Utrecht
-# Student#: 901120-751-050 & 931112-059-020
 # Institute: Wageningen University and Research
 # Course: Geo-scripting (GRS-33806)
 # Date: 2016-01-11
@@ -23,29 +22,19 @@ library(rgdal)
 library(rgeos)
 library(maptools)
 
-
+getwd()
 # download the data (BONUS)
-download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-building-shape.zip',
-							destfile = './data/netherlands-building-shape.zip', method = 'auto')
-download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-natural-shape.zip',
-							destfile = './data/netherlands-natural-shape.zip', method = 'auto')
+dir.create("./data")
 download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-places-shape.zip',
 							destfile = './data/etherlands-places-shape.zip', method = 'auto')
 download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-railways-shape.zip',
 							destfile = './data/netherlands-railways-shape.zip', method = 'auto')
 
-NL_buildings <- "./data/netherlands-building-shape.zip"
-NL_natural <- "./data/netherlands-building-shape.zip"
 NL_places <- "./data/netherlands-building-shape.zip"
 NL_railways <- "./data/netherlands-railways-shape.zip"
 
 # unzip the data
-unzip(NL_buildings, files = NULL, list = FALSE, overwrite = TRUE,
-			junkpaths = FALSE, exdir = "./data/NL_buildings", unzip = "internal",
-			setTimes = FALSE)
-unzip(NL_natural, files = NULL, list = FALSE, overwrite = TRUE,
-			junkpaths = FALSE, exdir = "./data/NL_natural", unzip = "internal",
-			setTimes = FALSE)
+
 unzip(NL_places, files = NULL, list = FALSE, overwrite = TRUE,
 			junkpaths = FALSE, exdir = "./data/NL_places", unzip = "internal",
 			setTimes = FALSE)
@@ -79,6 +68,7 @@ KML(x=railway_test_RD, filename='./output/railway_test_RD.kml', overwrite=TRUE)
 Campus_Atlas_LL <- c(51.988021, 5.668815)
 Busstation_LL <- c(51.969408, 5.667005)
 
+
 ## RGDAL method
 NL_Railways <- "./data/NL_railways/railways.shp"
 NL_Railways.shp <- readOGR("./data/NL_railways/railways.shp")
@@ -88,6 +78,9 @@ ogrInfo(".", "./data/NL_railways/railways.shp")
 NL_Railways <- "./data/NL_railways/railways.shp"
 NL_Railways.dbf <- "./data/NL_railways/railways.dbf"
 ogrInfo(".", NL_Railways.shp)
+
+# RGDALmethod_Rik
+source("R/rgdalmethod.R")
 
 
 # # untar lansat data
