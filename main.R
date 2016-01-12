@@ -8,13 +8,14 @@
 rm(list = ls())  # Clear the workspace!
 ls() ## no objects left in the workspace
 
-# referring to functions in R folder
-source("R/prj_string_RD.R")
-
 # load the packages
 library(sp)
 library(rgdal)
 library(rgeos)
+
+# referring to functions in R folder
+source("R/prj_string_RD.R")
+source("R/colreg.R")
 
 getwd()
 
@@ -50,36 +51,40 @@ myplacesRD <- spTransform(NL_Places.shp, prj_string_RD)
 # create a 1000m buffer around the subset
 buffline <- gBuffer(mylinesRD , width=1000, quadsegs=500, byid = TRUE)
 
-# intersection
-myintersection <- gIntersection(buffline, myplacesRD, byid = TRUE)
-myintersection2 <- intersect(buffline, myplacesRD)
-
-
-# visualisation of place(s) inside the buffer
-plot(buffline, lty = 3, lwd = 2, col = "blue")
-plot(mylinesRD, add= TRUE, lty = 3, lwd = 2, col = "red")
-
-plot(myplacesRD, add= TRUE)
-plot(myintersection, col="blue4")
-
-spplot(myintersection, zcol="coords", col.regions = "red",
-			 xlim = bbox(buffline)[1, ]+c(-0.01,0.01),
-			 ylim = bbox(buffline)[2, ]+c(-0.01,0.01),
-			 scales= list(draw = TRUE))
-
-myintersection
-
-# Name of city: Utrecht
-# Population of city: 100000
+# intersects, with 'gIntersects', NOT with 'gIntersection'!!
+myintersection <- gIntersects(myplacesRD, buffline, byid = TRUE)
+# create a subset of object(s) that intersect
+SS_The_City <- subset(myplacesRD, myintersection[TRUE])
 
 # write Shapefile file to disk
 dir.create("./output", showWarnings = FALSE)
-writeOGR(buffline, "./output", "buffline", driver="ESRI Shapefile")
+writeOGR(buffline, "./output", "buffline", driver="ESRI Shapefile", overwrite = TRUE)
+writeOGR(SS_The_City, "./output", "SS_The_City", driver="ESRI Shapefile", overwrite = TRUE)
+SS_The_City.shp <- readOGR(dsn="./output/SS_The_City.shp", layer="SS_The_City")
+The_City_Name <- SS_The_City.shp$name
 
+# visualisation of place(s) inside the buffer
+plot(buffline, lty = 3, lwd = 2, col = "blue")
+plot(SS_The_City, add= TRUE, lty = 3, lwd = 2, col = "red")
 
-point_data <- data.frame(Name = "City", row.names="1")
-point_data
-mypointdf <- SpatialPointsDataFrame(myintersection, point_data)
-mypointdf
+spplot(SS_The_City.shp, zcol = "name",
+			 xlim = bbox(SS_The_City.shp)[1, ]+c(-100,100),
+			 ylim = bbox(SS_The_City.shp)[2, ]+c(-100,100),
+			 xlab = "RD x", ylab = "RD Y",
+			 scales= list(draw = TRUE),
+			 add = TRUE,
+			 sp.layout = SS_The_City.shp)
 
-writeOGR(mypointdf, "./output", "mypointdf", driver="ESRI Shapefile")
+pts <- list("sp.points", SS_The_City, pch=19, col="red",zcol = "name")
+spplot(buffline, zcol = "type",
+			 col.regions = colreg,
+			 xlim = bbox(SS_The_City)[1, ]+c(-100,100),
+			 ylim = bbox(SS_The_City)[2, ]+c(-100,100),
+			 xlab = "RD x", ylab = "RD Y",
+			 scales= list(draw = TRUE),
+			 sp.layout=pts,
+			 #sp.layout=SS_The_City.shp,
+			 main = "City inside the buffer")
+
+# Name of city: Utrecht
+# Population of city: 100000
