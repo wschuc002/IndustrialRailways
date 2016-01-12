@@ -88,3 +88,5 @@ spplot(buffline, zcol = "type",
 
 # Name of city: Utrecht
 # Population of city: 100000
+SS_The_City.shp$name
+SS_The_City.shp$population
