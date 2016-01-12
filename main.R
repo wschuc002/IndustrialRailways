@@ -9,32 +9,26 @@ rm(list = ls())  # Clear the workspace!
 ls() ## no objects left in the workspace
 
 # referring to functions in R folder
-#source("R/ndviCalc.R")
-#source("R/ndviFilt.R")
-
-# load the packages (On Windows)
-#install.packages("raster")
+source("R/prj_string_RD.R")
 
 # load the packages
-library(raster)
 library(sp)
 library(rgdal)
 library(rgeos)
-library(maptools)
 
 getwd()
+
 # download the data (BONUS)
-dir.create("./data")
+dir.create("./data", showWarnings = FALSE)
 download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-places-shape.zip',
-							destfile = './data/etherlands-places-shape.zip', method = 'auto')
+							destfile = './data/netherlands-places-shape.zip', method = 'auto')
 download.file(url = 'http://www.mapcruzin.com/download-shapefile/netherlands-railways-shape.zip',
 							destfile = './data/netherlands-railways-shape.zip', method = 'auto')
 
-NL_places <- "./data/netherlands-building-shape.zip"
+NL_places <- "./data/netherlands-places-shape.zip"
 NL_railways <- "./data/netherlands-railways-shape.zip"
 
 # unzip the data
-
 unzip(NL_places, files = NULL, list = FALSE, overwrite = TRUE,
 			junkpaths = FALSE, exdir = "./data/NL_places", unzip = "internal",
 			setTimes = FALSE)
@@ -42,55 +36,50 @@ unzip(NL_railways, files = NULL, list = FALSE, overwrite = TRUE,
 			junkpaths = FALSE, exdir = "./data/NL_railways", unzip = "internal",
 			setTimes = FALSE)
 
-## MAPTOOLS method
+# read the data
+NL_Railways.shp <- readOGR(dsn="./data/NL_railways/railways.shp", layer="railways")
+NL_Places.shp <- readOGR(dsn="./data/NL_places/places.shp", layer="places")
 
-# read shapefile
-railway_test <- readShapeSpatial("./data/NL_railways/railways.shp")
+# create a subset of industrial railways
+SS <- subset(NL_Railways.shp, type == "industrial")
 
-# plot shapefile
-plot(railway_test)
+# transform to RD new
+mylinesRD <- spTransform(SS, prj_string_RD)
+myplacesRD <- spTransform(NL_Places.shp, prj_string_RD)
 
-# reproject LatLong
-railway_test_LL <- CRS("+proj=longlat +datum=WGS84")
-railways.shp <- readShapeLines("./data/NL_railways/railways.shp", verbose=TRUE, proj4string=railway_test_LL)
-plot(railways.shp)
+# create a 1000m buffer around the subset
+buffline <- gBuffer(mylinesRD , width=1000, quadsegs=500, byid = TRUE)
 
-# transform to RD New (EPSG:28992)
-railway_test_RD <- spTransform(railways.shp , CRS("+init=epsg:28992"))
-plot(railway_test_RD)
-
-# write KML file to disk
-KML(x=railway_test_LL, filename='./output/railway_test_RD.kml', overwrite=TRUE)
-KML(x=railway_test_RD, filename='./output/railway_test_RD.kml', overwrite=TRUE)
+# intersection
+myintersection <- gIntersection(buffline, myplacesRD, byid = TRUE)
+myintersection2 <- intersect(buffline, myplacesRD)
 
 
-# coordinates of two important locations in Wageningen
-Campus_Atlas_LL <- c(51.988021, 5.668815)
-Busstation_LL <- c(51.969408, 5.667005)
+# visualisation of place(s) inside the buffer
+plot(buffline, lty = 3, lwd = 2, col = "blue")
+plot(mylinesRD, add= TRUE, lty = 3, lwd = 2, col = "red")
+
+plot(myplacesRD, add= TRUE)
+plot(myintersection, col="blue4")
+
+spplot(myintersection, zcol="coords", col.regions = "red",
+			 xlim = bbox(buffline)[1, ]+c(-0.01,0.01),
+			 ylim = bbox(buffline)[2, ]+c(-0.01,0.01),
+			 scales= list(draw = TRUE))
+
+myintersection
+
+# Name of city: Utrecht
+# Population of city: 100000
+
+# write Shapefile file to disk
+dir.create("./output", showWarnings = FALSE)
+writeOGR(buffline, "./output", "buffline", driver="ESRI Shapefile")
 
 
-## RGDAL method
-NL_Railways <- "./data/NL_railways/railways.shp"
-NL_Railways.shp <- readOGR("./data/NL_railways/railways.shp")
+point_data <- data.frame(Name = "City", row.names="1")
+point_data
+mypointdf <- SpatialPointsDataFrame(myintersection, point_data)
+mypointdf
 
-
-ogrInfo(".", "./data/NL_railways/railways.shp")
-NL_Railways <- "./data/NL_railways/railways.shp"
-NL_Railways.dbf <- "./data/NL_railways/railways.dbf"
-ogrInfo(".", NL_Railways.shp)
-
-# RGDALmethod_Rik
-source("R/rgdalmethod.R")
-
-
-# # untar lansat data
-# untar("./data/LT51980241990098-SC20150107121947.tar.gz", exdir = "./data/LS5")
-# untar("./data/LC81970242014109-SC20141230042441.tar.gz", exdir = "./data/LS8")
-# 
-# # storing tif file paths
-# in_LS5_B3="./data/LS5/LT51980241990098KIS00_sr_band3.tif"
-# in_LS5_B4="./data/LS5/LT51980241990098KIS00_sr_band4.tif"
-# in_LS8_B4="./data/LS8/LC81970242014109LGN00_sr_band4.tif"
-# in_LS8_B5="./data/LS8/LC81970242014109LGN00_sr_band5.tif"
-# in_cloud_LS5 <- "./data/LS5/LT51980241990098KIS00_cfmask.tif"
-# in_cloud_LS8 <- "./data/LS8/LC81970242014109LGN00_cfmask.tif"
+writeOGR(mypointdf, "./output", "mypointdf", driver="ESRI Shapefile")
