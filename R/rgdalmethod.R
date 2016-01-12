@@ -13,11 +13,15 @@ places <- readOGR(dsn="./data/NL_places", layer="places")
 
 # select industrial railways
 subset <- railways[railways$type=="industrial"]
+indrail <- subset(railways, select = type, type == 'industrial')
+plot(indrail)
+
 # buffer 1000 meter
 railways_buffer <- gBuffer(subset, byid=TRUE, width=1000)
+plot(railways_buffer)
 # intersect places
-intersect(railways_buffer, places)
-
+railways_inter <- intersect(railways_buffer, places)
+plot(railways_inter)
 
 
 
